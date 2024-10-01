@@ -63,6 +63,8 @@ BEGIN_DISPATCH_MAP(CFormularCtrl, COleControl)
 	DISP_FUNCTION(CFormularCtrl, "HoleFeldwertUeberID", HoleFeldwertUeberID, VT_BSTR, VTS_I4)
 	DISP_FUNCTION(CFormularCtrl, "HoleFeldbeschreibungUeberID", HoleFeldbeschreibungUeberID, VT_BSTR, VTS_I4)
 	DISP_FUNCTION(CFormularCtrl, "HoleVoranmeldungszeitraum", HoleVoranmeldungszeitraum, VT_I4, VTS_NONE)
+	DISP_FUNCTION(CFormularCtrl, "HoleVerknuepfteKonten", HoleVerknuepfteKonten, VT_BSTR, VTS_BSTR VTS_I4)
+	DISP_FUNCTION(CFormularCtrl, "WaehleFormularUndBetrieb", WaehleFormularUndBetrieb, VT_EMPTY, VTS_BSTR VTS_BSTR)
 	//}}AFX_DISPATCH_MAP
 	DISP_FUNCTION_ID(CFormularCtrl, "AboutBox", DISPID_ABOUTBOX, AboutBox, VT_EMPTY, VTS_NONE)
 END_DISPATCH_MAP()
@@ -226,15 +228,15 @@ void CFormularCtrl::AboutBox()
 BSTR CFormularCtrl::HoleFormularnamen(long Index, LPCTSTR Filter) 
 {
 	CString strResult;
-	HoleFormularnamenAusCSA(Index, Filter, m_csaFormulare, &strResult);	
+	HoleFormularnamenAusCSA(Index, Filter, m_pDoc->m_csaFormulare, &strResult);	
 /*	warum habe ich das hier mal gemacht? warum obige zeile auskommentiert?
-	if (Index >=0 && Index < m_csaFormulare.GetSize())
+	if (Index >=0 && Index < m_pDoc->m_csaFormulare.GetSize())
 	{
 		XDoc xmldoc;
 #if defined(_DEBUG)
-	TRACE2("HoleFormularnamen(): index %d name '%s'\r\n", (int)Index, (LPCSTR)m_csaFormulare[Index]);
+	TRACE2("HoleFormularnamen(): index %d name '%s'\r\n", (int)Index, (LPCSTR)m_pDoc->m_csaFormulare[Index]);
 #endif
-		xmldoc.LoadFile(m_csaFormulare[Index]);
+		xmldoc.LoadFile(m_pDoc->m_csaFormulare[Index]);
 		LPXNode xml = xmldoc.GetRoot();
 		if (xml) 
 		{
@@ -251,31 +253,31 @@ BSTR CFormularCtrl::HoleFormularnamen(long Index, LPCTSTR Filter)
 void CFormularCtrl::SetzeDokumentID(long ID) 
 {
 	m_pDoc = (CEasyCashDoc *)ID;
-	LadeECFormulare(m_csaFormulare);
+	LadeECFormulare(m_pDoc->m_csaFormulare);
 }
 
 BSTR CFormularCtrl::HoleFormularpfad(long Index) 
 {
-	if (Index >=0 && Index < m_csaFormulare.GetSize())
-		return m_csaFormulare[Index].AllocSysString();
+	if (Index >=0 && Index < m_pDoc->m_csaFormulare.GetSize())
+		return m_pDoc->m_csaFormulare[Index].AllocSysString();
 	else 
 		return ((CString)"").AllocSysString();
 }
 
 long CFormularCtrl::HoleFormularanzahl() 
 {
-	return m_csaFormulare.GetSize();
+	return m_pDoc->m_csaFormulare.GetSize();
 }
 
 void CFormularCtrl::WaehleFormular(LPCTSTR Formular) 
 {
 	m_Formular = Formular;
-	m_pDoc->BerechneFormularfeldwerte((CString &)Formular, m_csaFormularfeldwerte, m_FeldIDs, &m_csaFormularfeldbeschreibungen);
+	m_pDoc->BerechneFormularfeldwerte((CString &)Formular, m_pDoc->m_csaFormularfeldwerte, m_FeldIDs, &m_pDoc->m_csaFormularfeldbeschreibungen);
 }
 
 long CFormularCtrl::HoleFeldanzahl() 
 {
-	return m_csaFormularfeldwerte.GetSize();
+	return m_pDoc->m_csaFormularfeldwerte.GetSize();
 }
 
 long CFormularCtrl::HoleFeldIDUeberIndex(long Index) 
@@ -285,24 +287,24 @@ long CFormularCtrl::HoleFeldIDUeberIndex(long Index)
 
 BSTR CFormularCtrl::HoleFeldwertUeberIndex(long Index) 
 {
-	if (Index >= 0 && Index < m_csaFormularfeldwerte.GetSize())
-		return m_csaFormularfeldwerte[Index].AllocSysString();
+	if (Index >= 0 && Index < m_pDoc->m_csaFormularfeldwerte.GetSize())
+		return m_pDoc->m_csaFormularfeldwerte[Index].AllocSysString();
 	else 
 		return ((CString)"").AllocSysString();
 }
 
 BSTR CFormularCtrl::HoleFeldwertUeberID(long FeldID) 
 {
-	if (m_FeldIDs[FeldID] >= 0 && m_FeldIDs[FeldID] < m_csaFormularfeldwerte.GetSize())
-		return m_csaFormularfeldwerte[m_FeldIDs[FeldID]].AllocSysString();
+	if (m_FeldIDs[FeldID] >= 0 && m_FeldIDs[FeldID] < m_pDoc->m_csaFormularfeldwerte.GetSize())
+		return m_pDoc->m_csaFormularfeldwerte[m_FeldIDs[FeldID]].AllocSysString();
 	else 
 		return ((CString)"").AllocSysString();
 }
 
 BSTR CFormularCtrl::HoleFeldbeschreibungUeberID(long FeldID) 
 {
-	if (m_FeldIDs[FeldID] >= 0 && m_FeldIDs[FeldID] < m_csaFormularfeldbeschreibungen.GetSize())
-		return m_csaFormularfeldbeschreibungen[m_FeldIDs[FeldID]].AllocSysString();
+	if (m_FeldIDs[FeldID] >= 0 && m_FeldIDs[FeldID] < m_pDoc->m_csaFormularfeldbeschreibungen.GetSize())
+		return m_pDoc->m_csaFormularfeldbeschreibungen[m_FeldIDs[FeldID]].AllocSysString();
 	else 
 		return ((CString)"").AllocSysString();
 }
@@ -310,4 +312,38 @@ BSTR CFormularCtrl::HoleFeldbeschreibungUeberID(long FeldID)
 long CFormularCtrl::HoleVoranmeldungszeitraum() 
 {
 	return m_pDoc->m_nZeitraum;
+}
+
+// gibt alle mit einer bestimmte Formular/FeldID-Kombination verknüpften Konten als tabulator-getrennte Liste zurück, 'E' oder 'A' ist den Kontennamen vorangestellt
+BSTR CFormularCtrl::HoleVerknuepfteKonten(LPCTSTR Formularname, long FeldID) 
+{
+	m_pDoc->ReadKontenCache();
+	struct Kontenart 
+	{
+		char *typ;  // 'E' für Einnahmen, 'A' für Ausgaben
+		CStringArray *konto;
+		CStringArray *feldzuweisungen;
+	} Kontenarten[] = 
+	{
+		"E", &m_pDoc->m_csEinnahmenKonten, &m_pDoc->m_csEinnahmenFeldzuweisungen,
+		"A", &m_pDoc->m_csAusgabenKonten, &m_pDoc->m_csAusgabenFeldzuweisungen
+	};
+
+	CString csVerknuepfteKonten = "";
+	for (int k = 0; k < 1; k++)
+		for (int i = 0; i < Kontenarten[k].feldzuweisungen->GetSize() && !Kontenarten[k].konto[i].IsEmpty(); i++)
+		{
+			CString csTemp = GetErweiterungKey((*Kontenarten[k].feldzuweisungen)[i], "ECT", Formularname);
+			if (FeldID == atol(csTemp))
+				csVerknuepfteKonten += Kontenarten[k].typ + (*Kontenarten[k].konto)[i] + "\t";
+		}
+
+	return csVerknuepfteKonten.AllocSysString();
+}
+
+void CFormularCtrl::WaehleFormularUndBetrieb(LPCTSTR Formular, LPCTSTR Betrieb)  
+{
+	m_Formular = Formular;
+	m_Betrieb = Betrieb;
+	m_pDoc->BerechneFormularfeldwerte(m_Formular, m_pDoc->m_csaFormularfeldwerte, m_FeldIDs, &m_pDoc->m_csaFormularfeldbeschreibungen, m_Betrieb);
 }

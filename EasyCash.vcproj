@@ -130,7 +130,7 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
-				CommandLine="copy ..\EasyCash\Release\CrashSender1402.exe .\Release&#x0D;&#x0A;copy ..\EasyCash\Release\crashrpt_lang.ini .\Release&#x0D;&#x0A;"
+				CommandLine="copy ..\CrashRpt\bin\CrashSender1402.exe .\Release&#x0D;&#x0A;copy ..\CrashRpt\bin\crashrpt_lang.ini .\Release&#x0D;&#x0A;"
 				Outputs=".\Release\CrashSender1402.exe;.\Release\crashrpt_lang.ini"
 			/>
 			<Tool
@@ -570,6 +570,10 @@
 			</File>
 			<File
 				RelativePath=".\ExtSplitter.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Formularabschnitt.cpp"
 				>
 			</File>
 			<File
@@ -1342,6 +1346,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Formularabschnitt.h"
+				>
+			</File>
+			<File
 				RelativePath="Formularfeld.h"
 				>
 			</File>
@@ -1760,11 +1768,20 @@
 			>
 		</File>
 		<File
+			RelativePath=".\Formularabschnitt.htm"
+			DeploymentContent="true"
+			>
+		</File>
+		<File
 			RelativePath=".\LIZENZ.txt"
 			>
 		</File>
 		<File
 			RelativePath=".\README.md"
+			>
+		</File>
+		<File
+			RelativePath=".\RES\ribbon.mfcribbon-ms"
 			>
 		</File>
 		<File

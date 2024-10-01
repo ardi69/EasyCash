@@ -35,6 +35,7 @@
 #include "oleidl.h"
 #include "comdef.h"
 #include "NeuesFormular.h"
+#include "Formularabschnitt.h"
 #include "XFolderDialog.h"
 #include "IconAuswahlBestandskonto.h"
 #include "IconAuswahlBetrieb.h"
@@ -86,6 +87,7 @@ BEGIN_MESSAGE_MAP(CEasyCashView, CScrollView)
 	ON_WM_LBUTTONDBLCLK()
 	ON_COMMAND(ID_FORMULAR_INFO, OnFormularInfo)
 	ON_COMMAND(ID_FORMULAR_NEU, OnFormularNeu)
+	ON_COMMAND(ID_FORMULAR_MENUUPDATE, OnFormularMenuUpdate)
 	ON_COMMAND(ID_FILE_PRINT_PREVIEW, OnFilePrintPreview)
 	ON_COMMAND(ID_NEXT, OnFindNext)
 	ON_COMMAND(ID_PREV, OnFindPrev)
@@ -278,6 +280,7 @@ void CEasyCashView::OnInitialUpdate()
 	// Popup-Menü aufbauen
 	PopUpFormular.CreatePopupMenu();
 	PopUpFormular.AppendMenu(MF_STRING, POPUPFORMULAR_NEUES_FELD, "&Neues Feld hier erzeugen");
+	PopUpFormular.AppendMenu(MF_STRING, POPUPFORMULAR_NEUER_ABSCHNITT, "Neuen Ab&schnitt hier erzeugen");
 	PopUpFormular.AppendMenu(MF_STRING, POPUPFORMULAR_FELDER_BEARBEITEN, "&Feld bearbeiten");
 	//PopUpFormular.AppendMenu(MF_STRING|MF_GRAYED, POPUPFORMULAR_KALKULATION_BEARBEITEN, "&Kalkulation bearbeiten");
 	PopUpFormular.AppendMenu(MF_STRING, POPUPFORMULAR_FOLMULARDATEI_OEFFNEN, "Formulardatei im &Editor öffnen");
@@ -285,6 +288,7 @@ void CEasyCashView::OnInitialUpdate()
 	PopUpFormular.AppendMenu(MF_STRING, POPUPFORMULAR_FELDWERT_KOPIEREN, "Feldwert in die &Zwischenablage kopieren");	
 
 	propdlg = new CPropertySheet("EasyCash Einstellungen", this);
+	// propdlg->EnableDynamicLayout(TRUE); Sheet-Fenster vergrößert sich bei jedem DoModal() :(
 	einstellungen1 = new CEinstellungen1();
 	einstellungen1->m_pDoc = GetDocument();
 	einstellungen1->m_pView = this;
@@ -346,6 +350,174 @@ Für den Fall, dass die Daten verschoben wurden, ändern Sie bitte das Datenverzei
 		}
 
 	// Formulare in Menü laden
+	UpdateFormularMenu();
+
+	m_cbmIcons.LoadBitmap(IDB_ICONS);
+	m_tbiIcons.SetImageSize(CSize(32, 32));
+	m_tbiIcons.Load(IDB_ICONS);
+	m_cbmIconsBestandskonten.LoadBitmap(IDB_ICONS_BESTANDSKONTEN);
+	m_tbiIconsBestandskonten.SetImageSize(CSize(32, 32));
+	m_tbiIconsBestandskonten.Load(IDB_ICONS_BESTANDSKONTEN);	
+
+	// neuer Ribbon-Kram für alten Plugin-Kram
+	CMFCRibbonButton* pAnsichtPluginsButton;
+	if (pAnsichtPluginsButton = ((CMainFrame*)AfxGetMainWnd())->m_pAnsichtPluginsButton)
+	{
+		ExtensionDLLsClass *pExtensionDLLs = ExtensionDLLs;
+
+		while (pExtensionDLLs)
+		{
+			//pm->AppendMenu(MF_STRING, pExtensionDLLs->menu_item_id, pExtensionDLLs->menu_item_string);
+			if (pAnsichtPluginsButton->FindSubItemIndexByID(pExtensionDLLs->menu_item_id) < 0)
+				if (pAnsichtPluginsButton) pAnsichtPluginsButton->AddSubItem(new CMFCRibbonButton(pExtensionDLLs->menu_item_id, (LPCTSTR)pExtensionDLLs->menu_item_string, 25, 25));
+
+			pExtensionDLLs = pExtensionDLLs->next;
+		}
+	}
+	CIterateExtensionDLLs("ECTE_SetMainWindow", (void *)AfxGetMainWnd());
+
+	UpdateBetriebeMenu();
+	UpdateBestandskontenMenu();
+
+	if (!theApp.m_csStartupPlugin.IsEmpty())
+	{
+		CPluginElement* pPluginDaten = ((CMainFrame*)AfxGetMainWnd())->m_pPlugins;
+		while (pPluginDaten)
+		{
+			if (pPluginDaten->name.GetLength() >= theApp.m_csStartupPlugin.GetLength() && 
+				pPluginDaten->name.Left(theApp.m_csStartupPlugin.GetLength()) == theApp.m_csStartupPlugin)
+			{	// Finden wir ein Plugin bei dem die ersten Buchstaben des Startup-Plugin vom Cmd-Parameter passen?
+				PostMessage(WM_COMMAND, pPluginDaten->id, 0L);
+				break;
+			}
+
+			pPluginDaten = pPluginDaten->next;
+		}
+
+		theApp.m_csStartupPlugin = "";
+	}
+
+/*	// Dauertest Code
+int iii;
+for (iii = 0; iii < 50; iii++)
+{
+	SendMessage(WM_COMMAND, ID_CMD_PLUGIN_BASE+1, 0L);
+
+    // Must call Create() before using the dialog
+    ASSERT(m_hWnd!=NULL);
+
+    MSG msg;
+    // Handle dialog messages
+	int jjj;
+	for (jjj = 0; jjj < 100; jjj++)
+		while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (!::IsWindow(m_hWnd)) return;
+		  if(!IsDialogMessage(&msg))
+		  {
+			  Sleep(1);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);  
+		  }
+		}
+
+	SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
+	CString cs;
+	cs.Format("Schleifendurchlauf %d", iii);
+	((CMainFrame*)AfxGetMainWnd())->SetStatus(cs);
+
+}
+*/
+/*
+	// Must call Create() before using the dialog
+    ASSERT(m_hWnd!=NULL);
+
+    // Handle dialog messages
+	for (jjj = 0; jjj < 100; jjj++)
+		while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (!::IsWindow(m_hWnd)) return;
+		  if(!IsDialogMessage(&msg))
+		  {
+			  Sleep(1);
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);  
+		  }
+		}
+*/
+
+/*
+CEasyCashDoc* pDoc = GetDocument();
+
+CBuchung *m_pBuchung = NULL;
+int iii;
+for (iii = 0; iii < 100; iii++)
+{
+	int jjj;
+	for (jjj=0; jjj < pDoc->Ausgaben->Beschreibung.GetLength(); jjj++)
+	{
+		
+//		if (m_pBuchung) 
+//		{
+//			delete m_pBuchung;
+//		}
+//		m_pBuchung = new CBuchung;
+//
+//		m_pBuchung->Datum = CTime::GetCurrentTime() + CTimeSpan((int)pDoc->Einnahmen->Beschreibung[jjj]);
+//		m_pBuchung->Betrag = (int)pDoc->Einnahmen->Beschreibung[jjj]*100;
+//		m_pBuchung->Beschreibung = (CString)pDoc->Einnahmen->Beschreibung[jjj];
+//		m_pBuchung->Belegnummer = (CString)pDoc->Einnahmen->Beschreibung[jjj];
+//		m_pBuchung->MWSt = 0;
+//		m_pBuchung->AbschreibungRestwert = 0;
+//		m_pBuchung->AbschreibungNr = 1;
+//		m_pBuchung->AbschreibungJahre = 1;
+//		m_pBuchung->AbschreibungDegressiv = FALSE;
+//		m_pBuchung->AbschreibungSatz = 0;
+//		
+//		m_pBuchung->next = pDoc->Einnahmen;
+//		pDoc->Einnahmen = m_pBuchung;
+//		m_pBuchung = NULL;
+		
+
+		CBuchung **p;
+
+		p = &(pDoc->Einnahmen);
+
+		while (*p)
+			p = &((*p)->next);
+
+		*p = new CBuchung;
+		(*p)->next = NULL;
+
+		m_pBuchung = *p;
+		m_pBuchung->Datum = CTime::GetCurrentTime() + CTimeSpan((int)pDoc->Ausgaben->Beschreibung[jjj]);
+		m_pBuchung->Betrag = (int)pDoc->Ausgaben->Beschreibung[jjj]*100;
+		m_pBuchung->Beschreibung = (CString)pDoc->Ausgaben->Beschreibung[jjj];
+		m_pBuchung->Belegnummer = (CString)pDoc->Ausgaben->Beschreibung[jjj];
+		m_pBuchung->MWSt = 0;
+		m_pBuchung->AbschreibungRestwert = 0;
+		m_pBuchung->AbschreibungNr = 1;
+		m_pBuchung->AbschreibungJahre = 1;
+		m_pBuchung->AbschreibungDegressiv = FALSE;
+		m_pBuchung->AbschreibungSatz = 0;
+
+
+		pDoc->SetModifiedFlag("Neue Einnahmenbuchung wurde eingefügt");
+	}
+
+	pDoc->Sort();
+
+	SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
+}
+SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
+
+*/
+
+//SetTimer(0, 10000, NULL);
+}
+
+void CEasyCashView::UpdateFormularMenu()
+{
 	LadeECFormulare(m_csaFormulare);
 	m_csaFormularnamen.RemoveAll();
 	m_csaFormularfilter.RemoveAll();
@@ -486,156 +658,12 @@ Für den Fall, dass die Daten verschoben wurden, ändern Sie bitte das Datenverzei
 	{
 		if (pBtnAnsichtFormulare) pBtnAnsichtFormulare->AddSubItem(new CMFCRibbonButton(ID_FORMULAR_INFO, "<weitere Formulare ...>"));
 		if (pBtnAnsichtFormulare) pBtnAnsichtFormulare->AddSubItem(new CMFCRibbonButton(ID_FORMULAR_NEU, "<eigenes Formular erzeugen>"));
+		if (pBtnAnsichtFormulare) pBtnAnsichtFormulare->AddSubItem(new CMFCRibbonButton(ID_FORMULAR_MENUUPDATE, "<Formular-Menü aktualisieren>"));
 	}
 
 	ASSERT(m_csaFormulare.GetSize() == m_csaFormularnamen.GetSize());
 	ASSERT(m_csaFormulare.GetSize() == m_csaFormularfilter.GetSize());
 	TRACE3("m_csaFormulare: %d  m_csaFormularnamen: %d  m_csaFormularfilter: %d\r\n", m_csaFormulare.GetSize(), m_csaFormularnamen.GetSize(), m_csaFormularfilter.GetSize());
-
-	m_cbmIcons.LoadBitmap(IDB_ICONS);
-	m_tbiIcons.SetImageSize(CSize(32, 32));
-	m_tbiIcons.Load(IDB_ICONS);
-	m_cbmIconsBestandskonten.LoadBitmap(IDB_ICONS_BESTANDSKONTEN);
-	m_tbiIconsBestandskonten.SetImageSize(CSize(32, 32));
-	m_tbiIconsBestandskonten.Load(IDB_ICONS_BESTANDSKONTEN);	
-
-	// neuer Ribbon-Kram für alten Plugin-Kram
-	CMFCRibbonButton* pAnsichtPluginsButton;
-	if (pAnsichtPluginsButton = ((CMainFrame*)AfxGetMainWnd())->m_pAnsichtPluginsButton)
-	{
-		ExtensionDLLsClass *pExtensionDLLs = ExtensionDLLs;
-
-		while (pExtensionDLLs)
-		{
-			//pm->AppendMenu(MF_STRING, pExtensionDLLs->menu_item_id, pExtensionDLLs->menu_item_string);
-			if (pAnsichtPluginsButton->FindSubItemIndexByID(pExtensionDLLs->menu_item_id) < 0)
-				if (pAnsichtPluginsButton) pAnsichtPluginsButton->AddSubItem(new CMFCRibbonButton(pExtensionDLLs->menu_item_id, (LPCTSTR)pExtensionDLLs->menu_item_string, 25, 25));
-
-			pExtensionDLLs = pExtensionDLLs->next;
-		}
-	}
-	CIterateExtensionDLLs("ECTE_SetMainWindow", (void *)AfxGetMainWnd());
-
-	UpdateBetriebeMenu();
-	UpdateBestandskontenMenu();
-
-/*	// Dauertest Code
-int iii;
-for (iii = 0; iii < 50; iii++)
-{
-	SendMessage(WM_COMMAND, ID_CMD_PLUGIN_BASE+1, 0L);
-
-    // Must call Create() before using the dialog
-    ASSERT(m_hWnd!=NULL);
-
-    MSG msg;
-    // Handle dialog messages
-	int jjj;
-	for (jjj = 0; jjj < 100; jjj++)
-		while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			if (!::IsWindow(m_hWnd)) return;
-		  if(!IsDialogMessage(&msg))
-		  {
-			  Sleep(1);
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);  
-		  }
-		}
-
-	SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
-	CString cs;
-	cs.Format("Schleifendurchlauf %d", iii);
-	((CMainFrame*)AfxGetMainWnd())->SetStatus(cs);
-
-}
-*/
-/*
-	// Must call Create() before using the dialog
-    ASSERT(m_hWnd!=NULL);
-
-    // Handle dialog messages
-	for (jjj = 0; jjj < 100; jjj++)
-		while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			if (!::IsWindow(m_hWnd)) return;
-		  if(!IsDialogMessage(&msg))
-		  {
-			  Sleep(1);
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);  
-		  }
-		}
-*/
-
-/*
-CEasyCashDoc* pDoc = GetDocument();
-
-CBuchung *m_pBuchung = NULL;
-int iii;
-for (iii = 0; iii < 100; iii++)
-{
-	int jjj;
-	for (jjj=0; jjj < pDoc->Ausgaben->Beschreibung.GetLength(); jjj++)
-	{
-		
-//		if (m_pBuchung) 
-//		{
-//			delete m_pBuchung;
-//		}
-//		m_pBuchung = new CBuchung;
-//
-//		m_pBuchung->Datum = CTime::GetCurrentTime() + CTimeSpan((int)pDoc->Einnahmen->Beschreibung[jjj]);
-//		m_pBuchung->Betrag = (int)pDoc->Einnahmen->Beschreibung[jjj]*100;
-//		m_pBuchung->Beschreibung = (CString)pDoc->Einnahmen->Beschreibung[jjj];
-//		m_pBuchung->Belegnummer = (CString)pDoc->Einnahmen->Beschreibung[jjj];
-//		m_pBuchung->MWSt = 0;
-//		m_pBuchung->AbschreibungRestwert = 0;
-//		m_pBuchung->AbschreibungNr = 1;
-//		m_pBuchung->AbschreibungJahre = 1;
-//		m_pBuchung->AbschreibungDegressiv = FALSE;
-//		m_pBuchung->AbschreibungSatz = 0;
-//		
-//		m_pBuchung->next = pDoc->Einnahmen;
-//		pDoc->Einnahmen = m_pBuchung;
-//		m_pBuchung = NULL;
-		
-
-		CBuchung **p;
-
-		p = &(pDoc->Einnahmen);
-
-		while (*p)
-			p = &((*p)->next);
-
-		*p = new CBuchung;
-		(*p)->next = NULL;
-
-		m_pBuchung = *p;
-		m_pBuchung->Datum = CTime::GetCurrentTime() + CTimeSpan((int)pDoc->Ausgaben->Beschreibung[jjj]);
-		m_pBuchung->Betrag = (int)pDoc->Ausgaben->Beschreibung[jjj]*100;
-		m_pBuchung->Beschreibung = (CString)pDoc->Ausgaben->Beschreibung[jjj];
-		m_pBuchung->Belegnummer = (CString)pDoc->Ausgaben->Beschreibung[jjj];
-		m_pBuchung->MWSt = 0;
-		m_pBuchung->AbschreibungRestwert = 0;
-		m_pBuchung->AbschreibungNr = 1;
-		m_pBuchung->AbschreibungJahre = 1;
-		m_pBuchung->AbschreibungDegressiv = FALSE;
-		m_pBuchung->AbschreibungSatz = 0;
-
-
-		pDoc->SetModifiedFlag("Neue Einnahmenbuchung wurde eingefügt");
-	}
-
-	pDoc->Sort();
-
-	SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
-}
-SendMessage(WM_COMMAND, ID_FILE_SAVE, 0L);
-
-*/
-
-//SetTimer(0, 10000, NULL);
 }
 
 static int timerzaehler = 0;
@@ -975,6 +1003,8 @@ void CEasyCashView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 			pBtnFilterKonto->AddSubItem(new CMFCRibbonButton(ID_VIEW_JOURNAL_FUER_KONTO_BASE + i, (LPCTSTR)m_KontenMitBuchungen[i]));
 	}
 	
+#define SPACES_ZU_ITEMS_HINZUFUEGEN 20
+
 	// Navigationsleiste aktualisieren
 	if (m_pNavigationWnd)
 	{
@@ -995,10 +1025,46 @@ void CEasyCashView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 		lg.mask = LVGF_GROUPID | LVGF_HEADER | LVGF_STATE | LVGF_ALIGN;
 		if (m_GewaehltesFormular >= 0)
 		{
-			lg.iGroupId = 0;
-			lg.pszHeader = L"Seiten";	
-			lg.cchHeader = wcslen(lg.pszHeader);
-			nav.InsertGroup(0, &lg);
+			// wenn Abschnitte vorhanden, einzelne Seiten als Group
+			if (m_csaFormulare.GetSize() > 0)
+			{
+				// Formulardefinitionsdatei in xmldoc laden
+				XDoc xmldoc;
+				xmldoc.LoadFile(m_csaFormulare[m_GewaehltesFormular]);
+				LPXNode xml = xmldoc.GetRoot();
+				if (xml)
+				{
+					CString csAnzahlSeiten = xml->GetAttrValue("seiten");
+					m_anzahl_formularseiten = atoi(csAnzahlSeiten);
+					LPXNode abschnitte = NULL;
+					abschnitte = xml->Find("abschnitte");
+
+					if (abschnitte && abschnitte->GetChildCount() > 0)  // Abschnitte-Sektion vorhanden?...
+					{
+						for (i = 0; i < m_anzahl_formularseiten; i++)
+						{
+							CString csGroupText;
+							csGroupText.Format("Seite %d", i + 1);
+
+							lg.iGroupId = i;
+							WCHAR wcTemp[1000];
+							if (!MultiByteToWideChar(CP_ACP, 0, csGroupText, (int)csGroupText.GetLength(), wcTemp, sizeof(wcTemp)))
+								continue;
+							wcTemp[csGroupText.GetLength()] = L'\0';
+							lg.pszHeader = wcTemp;	
+							lg.cchHeader = wcslen(lg.pszHeader);
+							nav.InsertGroup(i, &lg);
+						}
+					}
+					else  // ... ansonsten nur eine einzelne Group "Seiten" und deren Nummern als Items darunter
+					{
+						lg.iGroupId = 0;
+						lg.pszHeader = L"Seiten";	
+						lg.cchHeader = wcslen(lg.pszHeader);
+						nav.InsertGroup(0, &lg);					
+					}
+				}
+			}
 		}
 		else if (m_nAnzeige < 2)
 		{
@@ -1048,7 +1114,6 @@ void CEasyCashView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 		nav.DeleteAllItems();
 		nav.SetRedraw(TRUE);	
 
-#define SPACES_ZU_ITEMS_HINZUFUEGEN 20
 		int group;
 		switch (m_GewaehltesFormular >= 0 ? -1 : m_nAnzeige)
 		{
@@ -1104,29 +1169,58 @@ void CEasyCashView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint)
 		default:
 			if (m_csaFormulare.GetSize() > 0)
 			{
-				// Formulardefinitionsdatei in xmldoc laden
+				// noch mal Formulardefinitionsdatei in xmldoc laden
 				XDoc xmldoc;
 				xmldoc.LoadFile(m_csaFormulare[m_GewaehltesFormular]);
 				LPXNode xml = xmldoc.GetRoot();
 				if (!xml) break;
-				LPXNode seiten = NULL;
-				seiten = xml->Find("seiten");
+				LPXNode abschnitte = NULL;
+				abschnitte = xml->Find("abschnitte");
 				CString csAnzahlSeiten = xml->GetAttrValue("seiten");
 				m_anzahl_formularseiten = atoi(csAnzahlSeiten);
-
-				for (i = 0; i < m_anzahl_formularseiten; i++)
+				
+				m_cuiaScrollPos.RemoveAll();
+				if (abschnitte && abschnitte->GetChildCount() > 0)  // Abschnitte-Sektion vorhanden?
 				{
-					CString csItemText;
-					csItemText.Format("%d%s", i + 1, CString(_T(' '), SPACES_ZU_ITEMS_HINZUFUEGEN).GetString());
-					int iItem = nav.InsertItem(i, csItemText);
+					m_cuiaScrollPos.SetSize(abschnitte->GetChildCount());
 
-					LVITEM lvItem = {0};
-					lvItem.mask = LVIF_GROUPID;
-					lvItem.iItem = iItem;
-					lvItem.iSubItem = 0;
-					lvItem.iGroupId = 0;
-					nav.SetItem(&lvItem);
-				}	
+					// Abschnitte in Seiten-Groups einsortieren
+					for (i = 0; i < abschnitte->GetChildCount(); i++)
+					{
+						LPXNode child = abschnitte->GetChild(i);
+						CString csName = child->GetAttrValue("name");
+						int seite = atoi(child->GetAttrValue("seite"));					 
+						int vertikal = atoi(child->GetAttrValue("vertikal"));
+
+						CString csItemText;
+						//csItemText.Format("%s%s", csName, CString(_T(' '), SPACES_ZU_ITEMS_HINZUFUEGEN).GetString());
+						int iItem = nav.InsertItem(i, csName);
+						m_cuiaScrollPos[iItem] = (seite - 1) * 1414 + vertikal;
+
+						LVITEM lvItem = {0};
+						lvItem.mask = LVIF_GROUPID;
+						lvItem.iItem = iItem;
+						lvItem.iSubItem = 0;
+						lvItem.iGroupId = seite - 1;
+						nav.SetItem(&lvItem);
+					}
+				}
+				else  // nur Seitennummern auflisten
+				{
+					for (i = 0; i < m_anzahl_formularseiten; i++)
+					{
+						CString csItemText;
+						csItemText.Format("%d%s", i + 1, CString(_T(' '), SPACES_ZU_ITEMS_HINZUFUEGEN).GetString());
+						int iItem = nav.InsertItem(i, csItemText);
+
+						LVITEM lvItem = {0};
+						lvItem.mask = LVIF_GROUPID;
+						lvItem.iItem = iItem;
+						lvItem.iSubItem = 0;
+						lvItem.iGroupId = 0;
+						nav.SetItem(&lvItem);
+					}	
+				}
 			}		
 		}
 	}
@@ -1694,7 +1788,7 @@ void CEasyCashView::DrawToDC_AnlagenverzeichnisHeader(DrawInfo *pDrawInfo)
 	}
 }
 
-bool CEasyCashView::DrawToDC_BestandskontenHeader(DrawInfo *pDrawInfo, int nIcon, int nAnfangssaldo)
+bool CEasyCashView::DrawToDC_BestandskontenHeader(DrawInfo *pDrawInfo, int nIcon, int nAnfangssaldo, int nBuchungenDavor, CTime von)
 {
 	char buf[300];	
 
@@ -1733,7 +1827,12 @@ bool CEasyCashView::DrawToDC_BestandskontenHeader(DrawInfo *pDrawInfo, int nIcon
 	// jede gerade Zeile grau unterlegen
 	if (!(pDrawInfo->line % 2)) GraueBox(pDrawInfo, pDrawInfo->spalte_datum, pDrawInfo->line, pDrawInfo->spalte_afanr, pDrawInfo->line+1);
 	
-	Text(pDrawInfo, pDrawInfo->spalte_beschreibung, pDrawInfo->line, "Anfangssaldo/Übertrag");
+	char* cp = "Anfangssaldo/Übertrag";
+	if (nBuchungenDavor)
+		sprintf(buf, "%s (inkl. %d Buchung(en) vor dem %d.%d.%d -- siehe Journal nach Datum)", cp, nBuchungenDavor, von.GetDay(), von.GetMonth(), von.GetYear());
+	else
+		strcpy(buf, cp);
+	Text(pDrawInfo, pDrawInfo->spalte_beschreibung, pDrawInfo->line, buf);
 	pDrawInfo->m_pDC->SetTextAlign(TA_RIGHT);
 	int_to_currency_tausenderpunkt(nAnfangssaldo, 10, buf);
 	Text(pDrawInfo, pDrawInfo->spalte_brutto, pDrawInfo->line, buf);
@@ -3093,11 +3192,12 @@ void CEasyCashView::DrawToDC_Bestandskonten(CDC* pDC_par, DrawInfo *pDrawInfo)
 		// erst einmal reguläre Bestandskonten mit der gewohnten Sortierung aus den Einstellungen inkl. Icons/Salden auflisten
 		for (i = 0, bestandskonten_anzahl = 0; i < m_csaBestandskontenNamen.GetSize(); i++)
 		{
-			if (BestandskontoExistiertInBuchungen(m_csaBestandskontenNamen[i]))
+			int anfangssaldo = currency_to_int(m_csaBestandskontenSalden[i].GetBuffer(0));
+			if (BestandskontoExistiertInBuchungen(m_csaBestandskontenNamen[i]) || anfangssaldo != 0)
 			{
 				bestandskonto_name[bestandskonten_anzahl] = m_csaBestandskontenNamen[i];
 				bestandskonto_icon[bestandskonten_anzahl] = atoi(m_csaBestandskontenIcons[i]);
-				bestandskonto_anfangssaldo[bestandskonten_anzahl] = currency_to_int(m_csaBestandskontenSalden[i].GetBuffer(0));	
+				bestandskonto_anfangssaldo[bestandskonten_anzahl] = anfangssaldo;	
 				TRACE2("\r\nreguläres Bestandskonto %d: %s", bestandskonten_anzahl, m_csaBestandskontenNamen[bestandskonten_anzahl]);
 				bestandskonten_anzahl++;
 			}
@@ -3208,23 +3308,30 @@ void CEasyCashView::DrawToDC_Bestandskonten(CDC* pDC_par, DrawInfo *pDrawInfo)
 		CBuchung **ppBAusgaben = &pDoc->Ausgaben;
 
 		int nAnfangssaldo = bestandskonto_anfangssaldo[i];
+		int nBuchungenDavor = 0;
 
 		// Monats- bzw. Datumsfilter
 		while (*ppBEinnahmen && (*ppBEinnahmen)->Datum < von)
 		{
 			if ((*ppBEinnahmen)->Bestandskonto == bestandskonto_name[i])
+			{
 				nAnfangssaldo += (*ppBEinnahmen)->Betrag;
+				nBuchungenDavor++;
+			}
 			ppBEinnahmen = &((*ppBEinnahmen)->next);
 		}
 
 		while (*ppBAusgaben && (*ppBAusgaben)->Datum < von)
 		{
 			if ((*ppBAusgaben)->Bestandskonto == bestandskonto_name[i] && (*ppBAusgaben)->AbschreibungNr == 1)
+			{
 				nAnfangssaldo -= (*ppBAusgaben)->Betrag;
+				nBuchungenDavor++;
+			}
 			ppBAusgaben = &((*ppBAusgaben)->next);
 		}
 		
-		if (!DrawToDC_BestandskontenHeader(pDrawInfo, bestandskonto_icon[i], nAnfangssaldo))
+		if (!DrawToDC_BestandskontenHeader(pDrawInfo, bestandskonto_icon[i], nAnfangssaldo, nBuchungenDavor, von))
 			if (!pDrawInfo->pm)
 				return; // Bildaufbau abbrechen und auf redraw mit kleinerem Zoomlevel warten
 
@@ -5335,12 +5442,18 @@ void CEasyCashView::Icon(DrawInfo *pDrawInfo, int left, int top, /*int right,*/ 
 void CEasyCashView::OnFilePrint2() 
 {
 	WasWirdGedruckt = 0;
+	if (m_GewaehltesFormular > 0 && einstellungen2->m_land == 0)
+		DSAMessageBox(IDS_FORMULARDRUCK_DE, MB_OK);
+
 	CScrollView::OnFilePrint();	
 }
 
 void CEasyCashView::OnFilePrintPreview() 
 {
 	WasWirdGedruckt = 0;
+	if (m_GewaehltesFormular > 0 && einstellungen2->m_land == 0)
+		DSAMessageBox(IDS_FORMULARDRUCK_DE, MB_OK);
+
 	//CScrollView::OnFilePrintPreview();
 	AFXPrintPreview(this);	// mit Ribbon
 }
@@ -6174,12 +6287,12 @@ void CEasyCashView::ScrolleZuBuchung(int b)
 	GetDocument()->UpdateAllViews(NULL);
 }
 
-void CEasyCashView::ScrolleZuSeite(int s)
+void CEasyCashView::ScrolleZuSeite(int s, int vertikal)
 {	
 	if (m_GewaehltesFormular >= 0 && s >= 1 && s <= m_anzahl_formularseiten)
 	{
 		CPoint scrollpos;
-		scrollpos.SetPoint(0, (s - 1) * charheight * (PAGE_GAP + VCHARS));
+		scrollpos.SetPoint(0, (s - 1) * charheight * (PAGE_GAP + VCHARS) + vertikal);
 		ScrollToPosition(scrollpos);
 	}
 }
@@ -6221,16 +6334,16 @@ void CEasyCashView::OnDestroy()
 {
 	CScrollView::OnDestroy();
 	
-	if (buchenDlg) 
+	if (buchenDlg)
 	{
-		buchenDlg->DestroyWindow(); 
+		if (buchenDlg->m_hWnd) buchenDlg->DestroyWindow();
 		delete buchenDlg;
 		buchenDlg = NULL;
 	}
 
 	if (dauerbuchungenDlg) 
 	{
-		dauerbuchungenDlg->DestroyWindow(); 
+		if (dauerbuchungenDlg->m_hWnd) dauerbuchungenDlg->DestroyWindow();
 		delete dauerbuchungenDlg;
 		dauerbuchungenDlg = NULL;
 	}
@@ -6349,7 +6462,7 @@ BOOL CEasyCashView::OnCommand(WPARAM wParam, LPARAM lParam)
 
 						pb = (*ppb)->next;
 						(*ppb)->next = NULL;	// ganz wichtig wegen Kettenlöschung
-						delete *ppb;
+						delete *ppb;			// access violation v2.51.0.1-85be8316-6104-4e0f-8de8-bac7f47bc1ef v2.51.0.1-9511f9c5-8810-4591-a642-9c002744d709
 						*ppb = pb;
 
 						pDoc->SetModifiedFlag("Buchung wurde gelöscht");
@@ -6404,7 +6517,7 @@ BOOL CEasyCashView::OnCommand(WPARAM wParam, LPARAM lParam)
 		}
 	}
 	// Popup-Menü für Formularansicht
-	else if (wParam == POPUPFORMULAR_NEUES_FELD || wParam == POPUPFORMULAR_FELDER_BEARBEITEN 
+	else if (wParam == POPUPFORMULAR_NEUES_FELD || wParam == POPUPFORMULAR_NEUER_ABSCHNITT || wParam == POPUPFORMULAR_FELDER_BEARBEITEN 
 		|| wParam == POPUPFORMULAR_KALKULATION_BEARBEITEN || wParam == POPUPFORMULAR_FOLMULARDATEI_OEFFNEN
 		|| wParam == POPUPFORMULAR_FELDER_ANZEIGEN || POPUPFORMULAR_FELDWERT_KOPIEREN)
 	{
@@ -6440,6 +6553,54 @@ BOOL CEasyCashView::OnCommand(WPARAM wParam, LPARAM lParam)
 				pFormularfeldDlg->m_horizontal = ptFeldmarke.x;
 				pFormularfeldDlg->UpdateData(FALSE);
 				//pFormularfeldDlg->ShowWindow(SW_SHOW);
+			}
+			break;
+		case POPUPFORMULAR_NEUER_ABSCHNITT:
+			{				
+				// Feldmarkierung einblenden
+				ptFeldmarke = PopUpPosition;
+				ptFeldmarke.x = ptFeldmarke.x * 1000 / (int)((double)(charheight * (VCHARS + PAGE_GAP) * 1000 / 1414)) / querformat_faktor;
+				ptFeldmarke.y = ptFeldmarke.y * 1414 / (int)((double)(VCHARS + PAGE_GAP) * charheight);
+			
+				// Formulareigenschaften anzeigen
+				CFormularabschnitt dlg;
+				dlg.m_seite = ptFeldmarke.y / 1414 + 1;
+				dlg.m_vertikal = ptFeldmarke.y - ((dlg.m_seite-1) * 1414);
+
+				if (dlg.DoModal() == IDOK)
+				{
+					// Formulardefinitionsdatei in xmldoc laden
+					XDoc xmldoc;
+					xmldoc.LoadFile(m_csaFormulare[m_GewaehltesFormular]);
+					LPXNode xml = xmldoc.GetRoot();
+					LPXNode abschnitte = NULL;
+					if (xml)
+					{
+						 abschnitte = xml->Find("abschnitte");
+						 if (!abschnitte)  // ggf. Abschnitte-Node erzeugen
+							abschnitte = xml->AppendChild("abschnitte");
+						 if (abschnitte)
+						 {
+							LPXNode child = abschnitte->AppendChild("abschnitt");	// Abschnitt-Node in 'Abschnitte' erzeugen
+							if (child)
+							{
+								CString csFromInt;
+								child->AppendAttr("name", dlg.m_name);
+								_ultoa((DWORD)dlg.m_seite, csFromInt.GetBuffer(30), 10);
+								child->AppendAttr("seite", csFromInt);
+								_ultoa((DWORD)dlg.m_vertikal, csFromInt.GetBuffer(30), 10);
+								child->AppendAttr("vertikal", csFromInt);
+
+								DISP_OPT opt;
+								opt.newline = false; // no new line
+								if (!xmldoc.SaveFile(m_csaFormulare[m_GewaehltesFormular], &opt))
+								{
+									AfxMessageBox("Konnte den Abschnitt nicht in der Formulardatei speichern.");
+								}
+							}
+						}
+					}
+				}
 			}
 			break;
 		case POPUPFORMULAR_FELDER_BEARBEITEN:
@@ -9328,6 +9489,7 @@ void CEasyCashView::OnFormularNeu()
 {
 	CNeuesFormular dlg;
 	dlg.m_name = "Mein Formular";
+	dlg.m_anzeigename = "Mein Formular (Sommersaison)";
 	dlg.m_dateiname = "MeinFormular.ecf";
 	dlg.m_seiten = 2;
 	dlg.m_schriftart = "Courier New";
@@ -9384,16 +9546,21 @@ void CEasyCashView::OnFormularNeu()
 			f.WriteString("</formular>\r\n");
 			f.Close();
 //VS9
-			if (AfxGetMainWnd() && AfxGetMainWnd()->GetMenu() && AfxGetMainWnd()->GetMenu()->GetSubMenu(4))
-				AfxGetMainWnd()->GetMenu()->GetSubMenu(4)->InsertMenu(AfxGetMainWnd()->GetMenu()->GetSubMenu(4)->GetMenuItemCount()-1, MF_BYPOSITION, ID_FORMULAR_BASE+m_csaFormularnamen.GetSize(), dlg.m_name);
-			m_csaFormularnamen.Add(dlg.m_name);
-			m_csaFormulare.Add(csPfad);
+			//if (AfxGetMainWnd() && AfxGetMainWnd()->GetMenu() && AfxGetMainWnd()->GetMenu()->GetSubMenu(4))
+			//	AfxGetMainWnd()->GetMenu()->GetSubMenu(4)->InsertMenu(AfxGetMainWnd()->GetMenu()->GetSubMenu(4)->GetMenuItemCount()-1, MF_BYPOSITION, ID_FORMULAR_BASE+m_csaFormularnamen.GetSize(), dlg.m_name);
+			//m_csaFormularnamen.Add(dlg.m_name);
+			//m_csaFormulare.Add(csPfad);
+			UpdateFormularMenu();  // <- besser so als die letzten vier Zeilen...
 		}
 		break;
 
 cont:	;
-	}
-	
+	}	
+}
+
+void CEasyCashView::OnFormularMenuUpdate()
+{
+	UpdateFormularMenu();
 }
 
 #define ONKEY_WASDOWNBEFORE	0x4000

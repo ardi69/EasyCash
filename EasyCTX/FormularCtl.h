@@ -67,20 +67,19 @@ protected:
 	afx_msg BSTR HoleFormularnamen(long Index, LPCTSTR Filter);
 	afx_msg BSTR HoleFormularpfad(long Index);
 	afx_msg long HoleFormularanzahl();
-	afx_msg void WaehleFormular(LPCTSTR Formular);
+	afx_msg void WaehleFormular(LPCTSTR Formularpfad);
 	afx_msg long HoleFeldanzahl();
 	afx_msg long HoleFeldIDUeberIndex(long Index);
 	afx_msg BSTR HoleFeldwertUeberIndex(long Index);
 	afx_msg BSTR HoleFeldwertUeberID(long FeldID);
 	afx_msg BSTR HoleFeldbeschreibungUeberID(long FeldID);
 	afx_msg long HoleVoranmeldungszeitraum();
+	afx_msg BSTR HoleVerknuepfteKonten(LPCTSTR Formularname, long FeldID);
+	afx_msg void WaehleFormularUndBetrieb(LPCTSTR Formularpfad, LPCTSTR Betrieb);
 	//}}AFX_DISPATCH
 	DECLARE_DISPATCH_MAP()
 
 	afx_msg void AboutBox();
-	CStringArray m_csaFormulare;			// enthält die Dateinamen der verfügbaren Formulare
-	CStringArray m_csaFormularfeldwerte;	// Cache-Speicher für die Formularwerte
-	CStringArray m_csaFormularfeldbeschreibungen;	// ... und Feldbeschreibungen
 
 // Event maps
 	//{{AFX_EVENT(CFormularCtrl)
@@ -102,6 +101,8 @@ public:
 	dispidHoleFeldwertUeberID = 9L,
 	dispidHoleFeldbeschreibungUeberID = 10L,
 	dispidHoleVoranmeldungszeitraum = 11L,
+	dispidHoleVerknuepfteKonten = 12L,
+	dispidWaehleFormularUndBetrieb = 13L,
 	//}}AFX_DISP_ID
 	};
 private:
@@ -109,6 +110,7 @@ private:
 	CEasyCashDoc *m_pDoc;
 	int m_FeldIDs[10000];
 	CString m_Formular;
+	CString m_Betrieb;
 };
 
 //{{AFX_INSERT_LOCATION}}

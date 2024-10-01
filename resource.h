@@ -26,6 +26,9 @@
 #define IDS_EASYRTX_INSTABIL            111
 #define IDS_EASYCTX_FEHLT               112
 #define IDS_CAPTION_IMAGE_TIP           113
+#define IDR_HTML_FORMULARABSCHNITT      114
+#define IDS_OLEINIT                     114
+#define IDS_FORMULARDRUCK_DE            115
 #define IDR_MAINFRAME                   128
 #define IDR_EASYCATYPE                  129
 #define IDD_BUCHUNG                     130
@@ -90,6 +93,7 @@
 #define IDD_DATENVERZEICHNIS            412
 #define IDB_DATENVERZEICHNIS            413
 #define IDD_USTVORAUSZAHLUNGEN          414
+#define IDD_FORMULARABSCHNITT           415
 #define IDB_TOOLBAR_16                  419
 #define IDB_TOOLBAR_32                  420
 #define IDR_DAUERBUCHUNGEN_AUSFUEHREN_MONATE 421
@@ -108,6 +112,7 @@
 #define IDB_EASYCASH_32                 433
 #define IDB_INFO                        434
 #define IDR_ZOOMFAKTOR                  436
+#define IDR_RIBBON                      438
 #define IDC_DATUM_TAG                   1000
 #define IDC_BULB                        1000
 #define IDC_DATUM_MONAT                 1001
@@ -153,6 +158,7 @@
 #define IDC_EMAIL                       1019
 #define IDC_HALBJAEHRLICH               1020
 #define IDC_WWW                         1020
+#define IDC_ICON_AENDERN                1020
 #define IDC_JAEHRLICH                   1021
 #define IDC_REGISTER                    1021
 #define IDC_REG_STRING                  1022
@@ -517,6 +523,8 @@
 #define ID_FORMULAR_INFO                32913
 #define ID_ANLAGENVERZEICHNIS           32914
 #define ID_VIEW_JOURNAL_ANLAGENVERZEICHNIS 32915
+#define ID_FORMULARE_                   32916
+#define ID_FORMULAR_MENUUPDATE          32917
 #define ID_CMD_CUSTOM_MRU               48000
 #define ID_STATUS                       61445
 #define ID_SALDO                        61446
@@ -528,9 +536,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        438
-#define _APS_NEXT_COMMAND_VALUE         32916
+#define _APS_NEXT_RESOURCE_VALUE        442
+#define _APS_NEXT_COMMAND_VALUE         32918
 #define _APS_NEXT_CONTROL_VALUE         1172
-#define _APS_NEXT_SYMED_VALUE           110
+#define _APS_NEXT_SYMED_VALUE           115
 #endif
 #endif

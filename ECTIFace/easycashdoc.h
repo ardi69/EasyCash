@@ -133,6 +133,8 @@ public:
 //#define AFX_DATA AFX_EXT_DATA	// in DECLARE_SERIAL mit im- bzw. exportiert
 class AFX_EXT_CLASS CEasyCashDoc : public CDocument
 {
+	friend class CFormularCtrl;
+
 protected: // create from serialization only
 	CEasyCashDoc();
 
@@ -215,6 +217,10 @@ private:
 	long m_laFeldWerte[10000];
 	BOOL m_bFeldWertGueltig[10000];
 	CString m_csBetriebFuerFormular;
+	// für Formular-ActiveX-Control:
+	CStringArray m_csaFormulare;					// enthält die Dateinamen der verfügbaren Formulare
+	CStringArray m_csaFormularfeldwerte;			// Cache-Speicher für die Formularwerte
+	CStringArray m_csaFormularfeldbeschreibungen;	// ... und Feldbeschreibungen
 
 // weitere Operations
 public:

@@ -28,6 +28,7 @@
 #include "IconAuswahlMandant.h"
 #include "XFolderDialog.h"
 #include "RegistrierenDlg.h"
+#include <memory>
 
 
 #ifdef _DEBUG
@@ -166,7 +167,7 @@ static UINT indicators[] =
 CMainFrame::CMainFrame()
 {
 	m_nPluginCount = 0;
-	m_nAppLook = theApp.GetInt (_T("ApplicationLook"), ID_VIEW_APPLOOK_2007_1);
+	m_nAppLook = theApp.GetInt (_T("ApplicationLook"), ID_VIEW_APPLOOK_2005);
 	m_pPlugins = NULL;
 	m_pInfoButton = NULL;
 	m_pFilterKontoButton = NULL;
@@ -175,6 +176,7 @@ CMainFrame::CMainFrame()
 	m_pAnsichtFormulareButton = NULL;
 	m_pAnsichtPluginsButton = NULL;
 	m_bInformationModeElapsed = TRUE;
+	m_pSucheCombobox = NULL;
 }
 
 CMainFrame::~CMainFrame()
@@ -391,6 +393,9 @@ BOOL CMainFrame::CreateRibbonBar()
 	{
 		return FALSE;
 	}
+	//return m_wndRibbonBar.LoadFromResource(IDR_RIBBON);
+
+	// alter programmatischer Aufbau des Ribbons aus VS 2008:
 
 	// Load panel images:
 	m_PanelImages16.SetImageSize(CSize (16, 16));
@@ -409,16 +414,19 @@ BOOL CMainFrame::CreateRibbonBar()
 
 	// Add "Style" button to the right of tabs:
 	CMFCRibbonButton* pStyleButton = new CMFCRibbonButton ((UINT)-1, _T("Style\ns"), -1, -1);
-	pStyleButton->SetMenu (IDR_THEME_MENU, TRUE /* Right align */);
+	pStyleButton->SetMenu (IDR_THEME_MENU, TRUE);  // Right align
 	m_wndRibbonBar.AddToTabs (pStyleButton);
 
 	// Add "About" button to the right of tabs:
 	m_wndRibbonBar.AddToTabs (new CMFCRibbonButton (ID_APP_ABOUT, _T("Info\ni"), m_PanelImages32.ExtractIcon(13), 0, m_PanelImages16.ExtractIcon(13)));
 
+	// m_wndRibbonBar.SaveToXMLFile("res\\ribbon.mfcribbon-ms");
+
 	return TRUE;
+
 }
 
-void CMainFrame::Add_MainPanel ()
+void CMainFrame::Add_MainPanel()
 {
 	m_MainButton.SetImage (IDB_EASYCASH);
 	m_MainButton.SetToolTipText (_T("Datei"));
@@ -427,10 +435,11 @@ void CMainFrame::Add_MainPanel ()
 	m_wndRibbonBar.SetApplicationButton (&m_MainButton, CSize (45, 45));
 
 	CMFCRibbonMainPanel* pMainPanel = m_wndRibbonBar.AddMainCategory (_T("Datei"), IDB_TOOLBAR_16, IDB_TOOLBAR_32);
-
+	
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_NEW, "&Neu\nStrg+N", 0, 0));
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_OPEN, "Ö&ffnen...\nStrg+O", 1, 1));
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_SAVE, "&Speichern\nStrg+S", 2, 2));
+
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_SAVE_AS, "Speichern &unter\nStrg+U", 2, 2));
 
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_EXPORT, "&Export...", 26, 26));
@@ -438,7 +447,7 @@ void CMainFrame::Add_MainPanel ()
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_BACKUP_SUBFOLDER, "Datensicherung in &Unterverzeichnis", 3, 3));
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_BACKUP_EXTERNAL, "Datensicherung auf externes &Laufwerk", 3, 3));
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_BACKUP, "Datens&icherung auf CD/DVD", 3, 3));
-	
+
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_MANDANTEN, "&Mandanten...", 4, 4));	
 	
 	pMainPanel->Add (new CMFCRibbonButton (ID_FILE_REGISTRIERUNGSINFORMATIONEN_WIEDERHERSTELLEN, "Registrierungsinformationen &wiederherstellen...", 28, 28));
@@ -551,10 +560,9 @@ void CMainFrame::Add_Category1()
 	apBtn20->SetMenu(IDR_JOURNALANSICHT, TRUE);
 	apBtn20->SetAlwaysLargeImage();
 	pPanel2->Add(apBtn20.release());
-
+	
 	m_pAnsichtFormulareButton = new CMFCRibbonButton(ID_ANSICHT_FORMULARE, "Formular\nf", 21, 21);
 	m_pAnsichtFormulareButton->SetMenu(IDR_ANSICHT_FORMULARE, TRUE);
-//#pragma message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	m_pAnsichtFormulareButton->RemoveAllSubItems();
 	m_pAnsichtFormulareButton->SetAlwaysLargeImage();
 	pPanel2->Add(m_pAnsichtFormulareButton);
@@ -566,7 +574,6 @@ void CMainFrame::Add_Category1()
 
 	m_pAnsichtPluginsButton = new CMFCRibbonButton(ID_FILE_PLUGINMANAGER, "Plugin\np", 25, 25);
 	m_pAnsichtPluginsButton->SetMenu(IDR_ANSICHT_PLUGINS, TRUE);
-//#pragma message("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	m_pAnsichtPluginsButton->RemoveAllSubItems();
 	m_pAnsichtPluginsButton->SetAlwaysLargeImage();
 	pPanel2->Add(m_pAnsichtPluginsButton);
@@ -1113,19 +1120,30 @@ void CMainFrame::OnAppLook(UINT id)
 			break;
 		}
 
+#if (_MSC_VER >= 1600)
+		m_wndRibbonBar.SetWindows7Look(FALSE);
+#endif
 		CMFCVisualManager::SetDefaultManager (RUNTIME_CLASS (CMFCVisualManagerOffice2007));
 		CDockingManager::SetDockingMode (DT_SMART);
 		break;
 
 
 	case ID_VIEW_APPLOOK_2003:
+#if (_MSC_VER >= 1600)
+		m_wndRibbonBar.SetWindows7Look(FALSE);
+#endif
 		CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerOffice2003));
 		CDockingManager::SetDockingMode (DT_SMART);
 		break;
 
-	case ID_VIEW_APPLOOK_2005:
-		CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerVS2005));
+	case ID_VIEW_APPLOOK_2005:  // Windows7
+#if (_MSC_VER >= 1600)
+		CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows7));
+#endif
 		CDockingManager::SetDockingMode (DT_SMART);
+#if (_MSC_VER >= 1601)
+		m_wndRibbonBar.SetWindows7Look(TRUE);
+#endif
 		break;
 
 	default:
@@ -1564,7 +1582,7 @@ void CMainFrame::OnFileWaehleDatenverzeichnis()
 		SetIniFileName(((CString)(csDatenverzeichnis + "\\easyct.ini")).GetBuffer(0));
 
 		if (csDatenverzeichnis != csAltesDatenverzeichnis)
-			AfxMessageBox("Bitte kopieren Sie die easyct.ini und alle benötigten Buchungsdateien (Jahr????.eca) in das neue Datenverzeichnis.");
+			AfxMessageBox("Bitte kopieren Sie die easyct.ini und alle benötigten Buchungsdateien (Jahr????.eca) ggf. in das neue Datenverzeichnis.");
 	}
 }
 

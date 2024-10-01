@@ -253,7 +253,7 @@ protected:
 	bool DrawToDC_EinnahmenHeader(DrawInfo *pDrawInfo);
 	void DrawToDC_AusgabenHeader(DrawInfo *pDrawInfo);
 	void DrawToDC_AnlagenverzeichnisHeader(DrawInfo *pDrawInfo);
-	bool DrawToDC_BestandskontenHeader(DrawInfo *pDrawInfo, int nIcon, int nAnfangssaldo);
+	bool DrawToDC_BestandskontenHeader(DrawInfo *pDrawInfo, int nIcon, int nAnfangssaldo, int nBuchungenDavor, CTime von);
 	void DrawToDC_EinnahmenFooter(DrawInfo *pDrawInfo);
 	void DrawToDC_AusgabenFooter(DrawInfo *pDrawInfo);
 	void DrawToDC_BestandskontenFooter(DrawInfo *pDrawInfo);
@@ -273,6 +273,7 @@ protected:
 	void DrawFormularToDC(CDC* pDC, DrawInfo *pDrawInfo);
 	void OnFind(int nIncrement);
 	void ShowFindToolbar(int nShowstate = SW_SHOW);
+	void UpdateFormularMenu();
 	void UpdateBetriebeMenu();
 	void UpdateBestandskontenMenu();
 	void UpdateBetriebe();
@@ -295,8 +296,9 @@ public:
 	char *GetLandeskuerzel(); 
 	char *GetWaehrungskuerzel();
 	void ScrolleZuBuchung(int b);
-	void ScrolleZuSeite(int s);
+	void ScrolleZuSeite(int s, int vertikal = 0);
 	void AfAAbgang(CBuchung **ppb);
+	CUIntArray m_cuiaScrollPos;	// Array von uints für Formular-Abschnittsnavigation
 
 // Generated message map functions
 protected:
@@ -325,6 +327,7 @@ protected:
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnFormularInfo();
 	afx_msg void OnFormularNeu();
+	afx_msg void OnFormularMenuUpdate();
 	afx_msg void OnFilePrintPreview();
 	afx_msg void OnFindNext();
 	afx_msg void OnFindPrev();
@@ -393,6 +396,7 @@ inline CEasyCashDoc* CEasyCashView::GetDocument()
 #define POPUPFORMULAR_FOLMULARDATEI_OEFFNEN		10013
 #define POPUPFORMULAR_FELDER_ANZEIGEN			10014
 #define POPUPFORMULAR_FELDWERT_KOPIEREN			10015
+#define POPUPFORMULAR_NEUER_ABSCHNITT			10016
 
 #define POPUP_SPLIT		11000
 //					bis	11009

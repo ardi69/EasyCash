@@ -96,9 +96,27 @@ BOOL CEasyCashApp::InitInstance()
 	char last_file[300];
 	CString csInitalStatusText;
 	
-	//CoInitialize(0);
-	// AfxOleInit();  führte zu heap corruption, den bug habe ich monatelang gesucht!
+	HRESULT hrCoInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+	switch (hrCoInit)
+	{
+	case S_FALSE:
+		AfxMessageBox("CoInitializeEx(): Die COM-Bibliothek wurde bereits in diesem Thread initialisiert."); break;
+	case RPC_E_CHANGED_MODE:
+		AfxMessageBox("CoInitializeEx(): Ein vorheriger Aufruf von CoInitializeEx hat das Parallelitätsmodell für diesen Thread als Multithread-Apartment (MTA) angegeben."); break;
+	case E_INVALIDARG:
+		AfxMessageBox("CoInitializeEx(): ungültiger Parameter"); break;
+	case E_OUTOFMEMORY:
+		AfxMessageBox("CoInitializeEx(): Speicher voll"); break;
+	case E_UNEXPECTED:
+		AfxMessageBox("CoInitializeEx(): unerwarteter Fehler"); break;
+	case S_OK:
+	default:
+		;
+		// Die COM-Bibliothek wurde in diesem Thread erfolgreich initialisiert.
+	}
 
+	//if (!AfxOleInit())  // führte mal zu heap corruption, deshalb lieber CoInitialize()
+	//	DSAMessageBox(IDS_OLEINIT);
 	// Version abholen
 	HMODULE hExe = GetModuleHandle("EASYCT.EXE");
 	_Module.Init(NULL, hExe);
@@ -138,13 +156,15 @@ BOOL CEasyCashApp::InitInstance()
 		info.uPriorities[CR_SMTP] = CR_NEGATIVE_PRIORITY;
 		info.pszEmailTo = "thomas@mielke.software";
 		info.pszEmailSubject = "EC&T Absturzbericht";
-		info.pszUrl = _T("https://www.easyct.de/crashrpt.php");    // URL for sending error reports over HTTP.                
+		info.pszUrl = _T("https://www.easyct.de/crashrpt.php");	// URL for sending error reports over HTTP.                
 		// Install all available exception handlers.
 		info.dwFlags |= CR_INST_ALL_POSSIBLE_HANDLERS; 
 		// Use binary encoding for HTTP uploads (recommended).
 		info.dwFlags |= CR_INST_HTTP_BINARY_ENCODING;     
 		// Provide privacy policy URL
-		//info.pszPrivacyPolicyURL = _T("http://easyct.no-ip.org/privacy.html");
+		//info.pszPrivacyPolicyURL = _T("http://easyct.de/privacy.html");
+		info.dwFlags |= CR_INST_SHOW_ADDITIONAL_INFO_FIELDS;	// EMail und Beschreibung per default einblenden
+		// info.dwFlags |= CR_INST_ALLOW_ATTACH_MORE_FILES;		// weitere Anhänge erlauben
 
 		int nResult = crInstall(&info);
 		if(nResult!=0)
@@ -396,6 +416,13 @@ BOOL CEasyCashApp::InitInstance()
 
 	// Parse command line for standard shell commands, DDE, file open
 	CCommandLineInfo cmdInfo;
+
+	if (!strncmp(m_lpCmdLine, "/P=", 3) && !strchr(m_lpCmdLine, ' '))	// nur /P-Option mit Pluginnamen angegeben?
+	{
+		m_csStartupPlugin = m_lpCmdLine + 3;							// Startup-Plugin setzen und
+		m_lpCmdLine[0] = '\0';											// im "kein Dateiname angegeben"-Modus verarbeiten
+	}
+
 	if (m_lpCmdLine[0] == '\0')
 	{
 		// Mandanten auswählen, wenn vorhanden --> Datenverzeichnis setzen
@@ -538,6 +565,21 @@ BOOL CEasyCashApp::InitInstance()
 	return TRUE;
 }
 
+void CEasyCashApp::ParseCommandLine(CCommandLineInfo& rCmdInfo)
+{
+	for (int i = 1; i < __argc; i++)
+	{
+		LPCTSTR pszParam = __targv[i];
+		if (!strncmp(pszParam, "/P=", 3))
+		{
+			// bei Programmstart als Parameter angegebenes Plugin öffnen
+			m_csStartupPlugin = pszParam+3;
+		}
+	}
+
+	CWinAppEx::ParseCommandLine(rCmdInfo);
+}
+
 int CEasyCashApp::ExitInstance() 
 {
 	// ExtensionDLLs Exit-Hook
@@ -549,7 +591,7 @@ int CEasyCashApp::ExitInstance()
 	
 	AtlAxWinTerm();
 
-	// CoUninitialize(); -- kann weggelassen werden: wird von AfxOleInit() automatisch erledigt
+	CoUninitialize();  // kann bei AfxOleInit() weggelassen werden: wird dann automatisch erledigt. AfxOleInit() führte aber zu heap corruptions
 
 #if defined(NDEBUG)
 	// Uninstall crash reporting

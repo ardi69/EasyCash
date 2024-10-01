@@ -26,12 +26,12 @@ Folgendes in dieser Reihenfolge installieren:
 - KB976656 (um .pch-Bug zu vermeiden)
 
 Weiteres:
-- Grafikbibliotheken (in der Projektdatei untergebracht im Verzeichnis 'GrafLib' auf derselben Ebene wie das EasyCash-Repoverzeichnis):
+- Grafikbibliotheken (in der Projektdatei untergebracht im Verzeichnis [GrafLib](https://github.com/Thomas-Mielke-Software/GrafLib) auf derselben Ebene wie das EasyCash-Repoverzeichnis):
     - cimage von Alejandro Aguilar Sierra (Jahrgang 1995)
     - libpng von Guy Eric Schalnat, Andreas Dilger und Glenn Randers-Pehrson (release 1.0.1)
     - libjpeg von der Independent JPEG Group (release 5a of 7-Dec-94)
     - zlib von Jean-loup Gailly und Mark Adler (release 1.0.4)
-- CrashRpt (siehe http://crashrpt.sourceforge.net/)
+- CrashRpt [SourceForge](siehe http://crashrpt.sourceforge.net/) oder [den Fork hier auf GitHib, für VS 2022](https://github.com/Thomas-Mielke-Software/CrashRpt/)
 
 ## Bauen:
 - in VisualStudio 2008 rechte Maustaste auf das Subprojekt 'EasyCash', als Startprojekt auswählen und dann F7 drücken
